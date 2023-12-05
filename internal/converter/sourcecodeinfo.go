@@ -121,9 +121,9 @@ func getDefinitionAtPath(file *descriptor.FileDescriptorProto, path []int32) pro
 }
 
 // formatTitleAndDescription returns a title string and a description string, made from proto comments:
-func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.SourceCodeInfo_Location) (title, description string) {
+func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.SourceCodeInfo_Location) (title, description string, params map[string]string) {
 	var comments []string
-
+	params = map[string]string{}
 	// Default title is camel-cased & split name:
 	if name != nil {
 		camelName := strcase.ToCamel(*name)
@@ -140,8 +140,20 @@ func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.Sourc
 	}
 
 	// Leading comments next:
+
 	if s := strings.TrimSpace(sl.GetLeadingComments()); s != "" {
-		comments = append(comments, s)
+		var ss = strings.Split(s, "\n")
+		for _, s := range ss {
+			if (strings.HasPrefix(s, "@minimum") || strings.HasPrefix(s, "@min")) && len(strings.Split(s, " ")) == 2 {
+				params["minimum"] = strings.Split(s, " ")[1]
+			} else if (strings.HasPrefix(s, "@maximum") || strings.HasPrefix(s, "@max")) && len(strings.Split(s, " ")) == 2 {
+				params["maximum"] = strings.Split(s, " ")[1]
+			} else if strings.HasPrefix(s, "@default") && len(strings.Split(s, " ")) == 2 {
+				params["default"] = strings.Split(s, " ")[1]
+			} else {
+				comments = append(comments, s)
+			}
+		}
 	}
 
 	// Trailing comments last:
@@ -159,7 +171,7 @@ func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.Sourc
 
 	// Return an empty string if the ExcludeCommentToken is found:
 	if strings.Contains(strings.Join(comments, " "), c.excludeCommentToken) {
-		return title, ""
+		return title, "", params
 	}
 
 	return
