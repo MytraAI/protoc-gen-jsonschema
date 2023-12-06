@@ -248,15 +248,15 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 			jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 		default:
 			jsonSchemaType.Type = gojsonschema.TYPE_OBJECT
-			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
-				jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
-			}
-			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
-				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
-			}
-			if messageFlags.DisallowAdditionalProperties {
-				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
-			}
+			// if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
+			// 	jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
+			// }
+			// if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
+			// 	jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
+			// }
+			// if messageFlags.DisallowAdditionalProperties {
+			// 	jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
+			// }
 		}
 
 	default:
