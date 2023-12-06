@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	protoc_gen_jsonschema "github.com/chrusty/protoc-gen-jsonschema"
+	protoc_gen_jsonschema "github.com/AkihiroUeda35/protoc-gen-jsonschema"
 	protoc_gen_validate "github.com/envoyproxy/protoc-gen-validate/validate"
 	"github.com/invopop/jsonschema"
 	orderedmap "github.com/wk8/go-ordered-map/v2"

@@ -11,7 +11,7 @@ build:
 .PHONY: fmt
 fmt:
 	@gofmt -s -w .
-	@goimports -w -local github.com/chrusty/protoc-gen-jsonschema .
+	@goimports -w -local github.com/AkihiroUeda35/protoc-gen-jsonschema .
 
 .PHONY: generate
 generate:
@@ -19,7 +19,7 @@ generate:
 
 .PHONY: install
 install:
-	@go install github.com/chrusty/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema
+	@go install github.com/AkihiroUeda35/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema
 
 .PHONY: build_linux
 build_linux:
@@ -33,6 +33,7 @@ samples: build
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=allow_null_values:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/ArrayOfMessages.proto || echo "No messages found (ArrayOfMessages.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=allow_null_values:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/ArrayOfObjects.proto || echo "No messages found (ArrayOfObjects.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=allow_null_values:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/ArrayOfPrimitives.proto || echo "No messages found (ArrayOfPrimitives.proto)"
+	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_opt=file_extension=cyclical.schema.json --jsonschema_out=allow_null_values:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/CyclicalReference.proto || echo "No messages found (CyclicalReference.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=jsonschemas -I. --proto_path=${PROTO_PATH} ${PROTO_PATH}/Enumception.proto || echo "No messages found (Enumception.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=disallow_additional_properties:jsonschemas -I. --proto_path=${PROTO_PATH} ${PROTO_PATH}/ImportedEnum.proto || echo "No messages found (ImportedEnum.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=disallow_additional_properties:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/NestedMessage.proto || echo "No messages found (NestedMessage.proto)"
@@ -63,6 +64,7 @@ samples: build
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=jsonschemas -I. --proto_path=${PROTO_PATH} ${PROTO_PATH}/OptionRequiredMessage.proto || echo "No messages found (OptionRequiredMessage.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=enforce_oneof:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/OneOf.proto || echo "No messages found (OneOf.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=all_fields_required:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/Proto2NestedObject.proto || echo "No messages found (Proto2NestedObject.proto)"
+	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=jsonschemas  ${PROTO_PATH}/ValidationOptions.proto || echo "No messages found (ValidationOptions.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/WellKnown.proto || echo "No messages found (WellKnown.proto)"
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/NoPackage.proto
 	@protoc --plugin=bin/protoc-gen-jsonschema --jsonschema_out=messages=[MessageKind10+MessageKind11+MessageKind12]:jsonschemas --proto_path=${PROTO_PATH} ${PROTO_PATH}/TwelveMessages.proto || echo "No messages found (TwelveMessages.proto)"

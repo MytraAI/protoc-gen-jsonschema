@@ -1,0 +1,111 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/$defs/Foo",
+    "$defs": {
+        "Foo": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
+            "properties": {
+                "name": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ]
+                },
+                "bar": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "items": {
+                                "$ref": "#/$defs/samples.Bar"
+                            },
+                            "type": "array"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": true,
+            "title": "Foo"
+        },
+        "samples.Bar": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
+            "properties": {
+                "id": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ]
+                },
+                "baz": {
+                    "$ref": "#/$defs/samples.Baz",
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        true
+                    ],
+                    "additionalProperties": true
+                }
+            },
+            "additionalProperties": true,
+            "title": "Bar"
+        },
+        "samples.Baz": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
+            "properties": {
+                "enabled": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "boolean"
+                        }
+                    ]
+                },
+                "foo": {
+                    "$ref": "#/$defs/Foo",
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        true
+                    ],
+                    "additionalProperties": true
+                }
+            },
+            "additionalProperties": true,
+            "title": "Baz"
+        }
+    }
+}
