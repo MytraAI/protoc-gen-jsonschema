@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
-    "$ref": "#/definitions/Enumception",
-    "definitions": {
+    "$ref": "#/$defs/Enumception",
+    "$defs": {
         "Enumception": {
             "properties": {
                 "name": {
@@ -20,12 +20,6 @@
                     "type": "boolean"
                 },
                 "failureMode": {
-                    "enum": [
-                        "RECURSION_ERROR",
-                        0,
-                        "SYNTAX_ERROR",
-                        1
-                    ],
                     "oneOf": [
                         {
                             "type": "string"
@@ -34,30 +28,24 @@
                             "type": "integer"
                         }
                     ],
-                    "title": "Failure Modes",
-                    "description": "FailureModes enum"
+                    "enum": [
+                        "RECURSION_ERROR",
+                        0,
+                        "SYNTAX_ERROR",
+                        1
+                    ]
                 },
                 "payload": {
-                    "$ref": "#/definitions/samples.PayloadMessage",
+                    "$ref": "#/$defs/samples.PayloadMessage",
                     "additionalProperties": true
                 },
                 "payloads": {
                     "items": {
-                        "$ref": "#/definitions/samples.PayloadMessage"
+                        "$ref": "#/$defs/samples.PayloadMessage"
                     },
                     "type": "array"
                 },
                 "importedEnum": {
-                    "enum": [
-                        "VALUE_0",
-                        0,
-                        "VALUE_1",
-                        1,
-                        "VALUE_2",
-                        2,
-                        "VALUE_3",
-                        3
-                    ],
                     "oneOf": [
                         {
                             "description": "Zero",
@@ -92,8 +80,16 @@
                             "const": 3
                         }
                     ],
-                    "title": "Imported Enum",
-                    "description": "This is an enum"
+                    "enum": [
+                        "VALUE_0",
+                        0,
+                        "VALUE_1",
+                        1,
+                        "VALUE_2",
+                        2,
+                        "VALUE_3",
+                        3
+                    ]
                 }
             },
             "additionalProperties": true,
@@ -118,6 +114,14 @@
                     "type": "boolean"
                 },
                 "topology": {
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ],
                     "enum": [
                         "FLAT",
                         0,
@@ -131,16 +135,7 @@
                         4,
                         "ARRAY_OF_MESSAGE",
                         5
-                    ],
-                    "oneOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "integer"
-                        }
-                    ],
-                    "title": "Topology"
+                    ]
                 }
             },
             "additionalProperties": true,

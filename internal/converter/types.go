@@ -3,6 +3,7 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	protoc_gen_jsonschema "github.com/chrusty/protoc-gen-jsonschema"
@@ -146,9 +147,15 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 		// Custom field options from protoc-gen-jsonschema:
 		if opt := proto.GetExtension(desc.GetOptions(), protoc_gen_jsonschema.E_FieldOptions); opt != nil {
 			if fieldOptions, ok := opt.(*protoc_gen_jsonschema.FieldOptions); ok {
-				stringDef.MinLength = proto.Uint64(uint64(fieldOptions.GetMinLength()))
-				stringDef.MaxLength = proto.Uint64(uint64(fieldOptions.GetMaxLength()))
-				stringDef.Pattern = fieldOptions.GetPattern()
+				if fieldOptions.GetMinLength() != 0 { //exclude default value
+					stringDef.MinLength = proto.Uint64(uint64(fieldOptions.GetMinLength()))
+				}
+				if fieldOptions.GetMaxLength() != 0 { //exclude default value
+					stringDef.MaxLength = proto.Uint64(uint64(fieldOptions.GetMaxLength()))
+				}
+				if fieldOptions.GetPattern() != "" { //exclude default value
+					stringDef.Pattern = fieldOptions.GetPattern()
+				}
 			}
 		}
 
@@ -170,11 +177,10 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 			}
 		} else {
 			jsonSchemaType.Type = stringDef.Type
-			jsonSchemaType.MinLength = stringDef.MinLength
 			jsonSchemaType.MaxLength = stringDef.MaxLength
+			jsonSchemaType.MinLength = stringDef.MinLength
 			jsonSchemaType.Pattern = stringDef.Pattern
 		}
-
 	// Bytes:
 	case descriptor.FieldDescriptorProto_TYPE_BYTES:
 		if messageFlags.AllowNullValues {
@@ -239,17 +245,17 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 			jsonSchemaType.Format = "date-time"
 		case ".google.protobuf.Value", ".google.protobuf.Struct":
 			jsonSchemaType.Type = gojsonschema.TYPE_OBJECT
-			//jsonSchemaType.AdditionalProperties = []byte("true")
+			jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 		default:
 			jsonSchemaType.Type = gojsonschema.TYPE_OBJECT
 			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
-				//jsonSchemaType.AdditionalProperties = jsonSchemaType.ContentSchema
+				jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 			}
 			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
-				//jsonSchemaType.AdditionalProperties = []byte("false")
+				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
 			}
 			if messageFlags.DisallowAdditionalProperties {
-				//jsonSchemaType.AdditionalProperties = []byte("false")
+				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
 			}
 		}
 
@@ -383,9 +389,10 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 
 	// Generate a description from src comments (if available)
 	if src := c.sourceInfo.GetField(desc); src != nil {
-		title, desc, params := c.formatTitleAndDescription(nil, src)
+		title, comment, params := c.formatTitleAndDescription(nil, src)
 		jsonSchemaType.Title = title
-		jsonSchemaType.Description = desc
+		jsonSchemaType.Description = comment
+
 		if val, ok := params["minimum"]; ok {
 			jsonSchemaType.Minimum = json.Number(val)
 		}
@@ -399,6 +406,16 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 				jsonSchemaType.Default = val
 			}
 		}
+		if val, ok := params["maxLength"]; ok {
+			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+				jsonSchemaType.MaxLength = &v
+			}
+		}
+		if val, ok := params["minLength"]; ok {
+			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+				jsonSchemaType.MinLength = &v
+			}
+		}
 	}
 
 	return jsonSchemaType, nil
@@ -406,21 +423,23 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 
 // Converts a proto "MESSAGE" into a JSON-Schema:
 func (c *Converter) convertMessageType(curPkg *ProtoPackage, msgDesc *descriptor.DescriptorProto) (*jsonschema.Schema, error) {
-
 	// Get a list of any nested messages in our schema:
 	duplicatedMessages, err := c.findNestedMessages(curPkg, msgDesc)
 	if err != nil {
 		return nil, err
 	}
-
 	// Build up a list of JSONSchema type definitions for every message:
 	definitions := jsonschema.Definitions{}
+	var msgName = msgDesc.GetName()
 	for refmsgDesc, nameWithPackage := range duplicatedMessages {
 		var typeName string
 		if c.Flags.TypeNamesWithNoPackage {
 			typeName = refmsgDesc.GetName()
 		} else {
 			typeName = nameWithPackage
+			if refmsgDesc.GetName() == msgName {
+				msgName = typeName
+			}
 		}
 		refType, err := c.recursiveConvertMessageType(curPkg, refmsgDesc, "", duplicatedMessages, true)
 		if err != nil {
@@ -432,11 +451,16 @@ func (c *Converter) convertMessageType(curPkg *ProtoPackage, msgDesc *descriptor
 	}
 
 	// Put together a JSON schema with our discovered definitions, and a $ref for the root type:
+	//var currentMsg = definitions[msgName]
+	//delete(definitions, msgName)
+	//newJSONSchema =currentMsg
+
 	newJSONSchema := &jsonschema.Schema{
-		Ref:         fmt.Sprintf("%s%s", c.refPrefix, msgDesc.GetName()),
 		Version:     c.schemaVersion,
 		Definitions: definitions,
+		Ref:         c.refPrefix + msgName,
 	}
+	//c.logger.WithField("msgname", definitions[msgDesc.GetName()]).Error("aaa")
 	return newJSONSchema, nil
 }
 
@@ -555,12 +579,12 @@ func (c *Converter) recursiveConvertMessageType(curPkg *ProtoPackage, msgDesc *d
 				{Type: gojsonschema.TYPE_OBJECT},
 				{Type: gojsonschema.TYPE_STRING},
 			}
-			// jsonSchemaType.AdditionalProperties = []byte("true")
+			jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 		case "Duration":
 			jsonSchemaType.Type = gojsonschema.TYPE_STRING
 		case "Struct":
 			jsonSchemaType.Type = gojsonschema.TYPE_OBJECT
-			// jsonSchemaType.AdditionalProperties = []byte("true")
+			jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 		case "ListValue":
 			jsonSchemaType.Type = gojsonschema.TYPE_ARRAY
 		}
@@ -606,9 +630,9 @@ func (c *Converter) recursiveConvertMessageType(curPkg *ProtoPackage, msgDesc *d
 
 	// disallowAdditionalProperties will prevent validation where extra fields are found (outside of the schema):
 	if messageFlags.DisallowAdditionalProperties {
-		//jsonSchemaType.AdditionalProperties = "false"
+		jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema //false
 	} else {
-		//jsonSchemaType.AdditionalProperties = []byte("true")
+		jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema //true
 	}
 
 	c.logger.WithField("message_str", msgDesc.String()).Trace("Converting message")
@@ -617,7 +641,6 @@ func (c *Converter) recursiveConvertMessageType(curPkg *ProtoPackage, msgDesc *d
 		// Custom field options from protoc-gen-jsonschema:
 		if opt := proto.GetExtension(fieldDesc.GetOptions(), protoc_gen_jsonschema.E_FieldOptions); opt != nil {
 			if fieldOptions, ok := opt.(*protoc_gen_jsonschema.FieldOptions); ok {
-
 				// "Ignored" fields are simply skipped:
 				if fieldOptions.GetIgnore() {
 					c.logger.WithField("field_name", fieldDesc.GetName()).WithField("message_name", msgDesc.GetName()).Debug("Skipping ignored field")
@@ -662,11 +685,11 @@ func (c *Converter) recursiveConvertMessageType(curPkg *ProtoPackage, msgDesc *d
 			}
 		}
 
+		//Output:
 		// Figure out which field names we want to use:
 		if jsonSchemaType.Properties == nil {
 			jsonSchemaType.Properties = orderedmap.New[string, *jsonschema.Schema]()
 		}
-		//jsonSchemaType.Properties = &orderedmap.OrderedMap[string, *jsonschema.Schema]{}
 		//c.logger.WithField("prop", jsonSchemaType.Properties).Error()
 		switch {
 

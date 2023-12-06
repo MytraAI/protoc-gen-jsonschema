@@ -1,15 +1,5 @@
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
-    "enum": [
-        "VALUE_0",
-        0,
-        "VALUE_1",
-        1,
-        "VALUE_2",
-        2,
-        "VALUE_3",
-        3
-    ],
     "oneOf": [
         {
             "description": "Zero",
@@ -43,6 +33,16 @@
             "description": "Three",
             "const": 3
         }
+    ],
+    "enum": [
+        "VALUE_0",
+        0,
+        "VALUE_1",
+        1,
+        "VALUE_2",
+        2,
+        "VALUE_3",
+        3
     ],
     "title": "Imported Enum",
     "description": "This is an enum"

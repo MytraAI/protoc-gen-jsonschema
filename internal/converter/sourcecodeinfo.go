@@ -144,12 +144,16 @@ func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.Sourc
 	if s := strings.TrimSpace(sl.GetLeadingComments()); s != "" {
 		var ss = strings.Split(s, "\n")
 		for _, s := range ss {
-			if (strings.HasPrefix(s, "@minimum") || strings.HasPrefix(s, "@min")) && len(strings.Split(s, " ")) == 2 {
+			if (strings.HasPrefix(s, "@minimum ") || strings.HasPrefix(s, "@min ")) && len(strings.Split(s, " ")) == 2 {
 				params["minimum"] = strings.Split(s, " ")[1]
-			} else if (strings.HasPrefix(s, "@maximum") || strings.HasPrefix(s, "@max")) && len(strings.Split(s, " ")) == 2 {
+			} else if (strings.HasPrefix(s, "@maximum ") || strings.HasPrefix(s, "@max ")) && len(strings.Split(s, " ")) == 2 {
 				params["maximum"] = strings.Split(s, " ")[1]
 			} else if strings.HasPrefix(s, "@default") && len(strings.Split(s, " ")) == 2 {
 				params["default"] = strings.Split(s, " ")[1]
+			} else if (strings.HasPrefix(s, "@minLength") || strings.HasPrefix(s, "@min_length") || strings.HasPrefix(s, "@minimum_length") || strings.HasPrefix(s, "@minimumLength")) && len(strings.Split(s, " ")) == 2 {
+				params["minLength"] = strings.Split(s, " ")[1]
+			} else if (strings.HasPrefix(s, "@maxLength") || strings.HasPrefix(s, "@max_length") || strings.HasPrefix(s, "@maximum_length") || strings.HasPrefix(s, "@maximumLength")) && len(strings.Split(s, " ")) == 2 {
+				params["maxLength"] = strings.Split(s, " ")[1]
 			} else {
 				comments = append(comments, s)
 			}

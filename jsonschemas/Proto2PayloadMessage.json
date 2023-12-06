@@ -1,12 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/Proto2PayloadMessage",
-    "definitions": {
+    "$ref": "#/$defs/Proto2PayloadMessage",
+    "$defs": {
         "Proto2PayloadMessage": {
-            "required": [
-                "name",
-                "id"
-            ],
             "properties": {
                 "name": {
                     "type": "string"
@@ -24,6 +20,14 @@
                     "type": "boolean"
                 },
                 "topology": {
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ],
                     "enum": [
                         "FLAT",
                         0,
@@ -37,20 +41,15 @@
                         4,
                         "ARRAY_OF_MESSAGE",
                         5
-                    ],
-                    "oneOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "integer"
-                        }
-                    ],
-                    "title": "Topology"
+                    ]
                 }
             },
             "additionalProperties": true,
             "type": "object",
+            "required": [
+                "name",
+                "id"
+            ],
             "title": "Proto 2 Payload Message"
         }
     }

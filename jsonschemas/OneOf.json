@@ -1,23 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/OneOf",
-    "definitions": {
+    "$ref": "#/$defs/OneOf",
+    "$defs": {
         "OneOf": {
-            "properties": {
-                "bar": {
-                    "$ref": "#/definitions/samples.OneOf.Bar",
-                    "additionalProperties": true
-                },
-                "baz": {
-                    "$ref": "#/definitions/samples.OneOf.Baz",
-                    "additionalProperties": true
-                },
-                "something": {
-                    "type": "boolean"
-                }
-            },
-            "additionalProperties": true,
-            "type": "object",
             "allOf": [
                 {
                     "oneOf": [
@@ -50,6 +35,21 @@
                     ]
                 }
             ],
+            "properties": {
+                "bar": {
+                    "$ref": "#/$defs/samples.OneOf.Bar",
+                    "additionalProperties": true
+                },
+                "baz": {
+                    "$ref": "#/$defs/samples.OneOf.Baz",
+                    "additionalProperties": true
+                },
+                "something": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
             "title": "One Of"
         },
         "samples.OneOf.Bar": {

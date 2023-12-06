@@ -1,8 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/OptionAllowNullValues",
-    "definitions": {
+    "$ref": "#/$defs/OptionAllowNullValues",
+    "$defs": {
         "OptionAllowNullValues": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
             "properties": {
                 "name2": {
                     "oneOf": [
@@ -36,14 +44,6 @@
                 }
             },
             "additionalProperties": true,
-            "oneOf": [
-                {
-                    "type": "null"
-                },
-                {
-                    "type": "object"
-                }
-            ],
             "title": "Option Allow Null Values"
         }
     }

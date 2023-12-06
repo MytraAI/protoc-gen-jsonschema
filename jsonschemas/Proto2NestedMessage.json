@@ -1,14 +1,11 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/Proto2NestedMessage",
-    "definitions": {
+    "$ref": "#/$defs/Proto2NestedMessage",
+    "$defs": {
         "Proto2NestedMessage": {
-            "required": [
-                "payload"
-            ],
             "properties": {
                 "payload": {
-                    "$ref": "#/definitions/samples.Proto2PayloadMessage",
+                    "$ref": "#/$defs/samples.Proto2PayloadMessage",
                     "additionalProperties": false
                 },
                 "description": {
@@ -17,13 +14,12 @@
             },
             "additionalProperties": true,
             "type": "object",
+            "required": [
+                "payload"
+            ],
             "title": "Proto 2 Nested Message"
         },
         "samples.Proto2PayloadMessage": {
-            "required": [
-                "name",
-                "id"
-            ],
             "properties": {
                 "name": {
                     "type": "string"
@@ -41,6 +37,14 @@
                     "type": "boolean"
                 },
                 "topology": {
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ],
                     "enum": [
                         "FLAT",
                         0,
@@ -54,20 +58,15 @@
                         4,
                         "ARRAY_OF_MESSAGE",
                         5
-                    ],
-                    "oneOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "integer"
-                        }
-                    ],
-                    "title": "Topology"
+                    ]
                 }
             },
             "additionalProperties": true,
             "type": "object",
+            "required": [
+                "name",
+                "id"
+            ],
             "title": "Proto 2 Payload Message"
         }
     }

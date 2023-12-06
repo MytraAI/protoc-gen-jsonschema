@@ -1,8 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/ArrayOfMessages",
-    "definitions": {
+    "$ref": "#/$defs/ArrayOfMessages",
+    "$defs": {
         "ArrayOfMessages": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
             "properties": {
                 "description": {
                     "oneOf": [
@@ -21,7 +29,7 @@
                         },
                         {
                             "items": {
-                                "$ref": "#/definitions/samples.PayloadMessage"
+                                "$ref": "#/$defs/samples.PayloadMessage"
                             },
                             "type": "array"
                         }
@@ -29,6 +37,9 @@
                 }
             },
             "additionalProperties": true,
+            "title": "Array Of Messages"
+        },
+        "samples.PayloadMessage": {
             "oneOf": [
                 {
                     "type": "null"
@@ -37,9 +48,6 @@
                     "type": "object"
                 }
             ],
-            "title": "Array Of Messages"
-        },
-        "samples.PayloadMessage": {
             "properties": {
                 "name": {
                     "oneOf": [
@@ -92,6 +100,17 @@
                     ]
                 },
                 "topology": {
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
                     "enum": [
                         "FLAT",
                         0,
@@ -105,30 +124,10 @@
                         4,
                         "ARRAY_OF_MESSAGE",
                         5
-                    ],
-                    "oneOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "integer"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "title": "Topology"
+                    ]
                 }
             },
             "additionalProperties": true,
-            "oneOf": [
-                {
-                    "type": "null"
-                },
-                {
-                    "type": "object"
-                }
-            ],
             "title": "Payload Message"
         }
     }

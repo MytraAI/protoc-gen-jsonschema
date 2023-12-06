@@ -41,7 +41,7 @@ Logic
 Installation
 ------------
 
-> Note: This tool requires Go 1.11+ to be installed.
+> Note: This tool requires Go 1.18+ to be installed.
 
 Install this plugin using Go:
 
