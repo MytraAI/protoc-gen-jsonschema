@@ -1,11 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/JSONFields",
-    "definitions": {
+    "$ref": "#/$defs/JSONFields",
+    "$defs": {
         "JSONFields": {
-            "required": [
-                "otherNumb"
-            ],
             "properties": {
                 "name": {
                     "type": "string"
@@ -31,6 +28,9 @@
             },
             "additionalProperties": true,
             "type": "object",
+            "required": [
+                "otherNumb"
+            ],
             "title": "JSON Fields"
         }
     }

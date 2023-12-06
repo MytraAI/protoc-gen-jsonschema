@@ -1,20 +1,10 @@
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
-    "$ref": "#/definitions/OptionEnumsAsConstants",
-    "definitions": {
+    "$ref": "#/$defs/OptionEnumsAsConstants",
+    "$defs": {
         "OptionEnumsAsConstants": {
             "properties": {
                 "importedEnum": {
-                    "enum": [
-                        "VALUE_0",
-                        0,
-                        "VALUE_1",
-                        1,
-                        "VALUE_2",
-                        2,
-                        "VALUE_3",
-                        3
-                    ],
                     "oneOf": [
                         {
                             "description": "Zero",
@@ -49,8 +39,16 @@
                             "const": 3
                         }
                     ],
-                    "title": "Imported Enum",
-                    "description": "This is an enum"
+                    "enum": [
+                        "VALUE_0",
+                        0,
+                        "VALUE_1",
+                        1,
+                        "VALUE_2",
+                        2,
+                        "VALUE_3",
+                        3
+                    ]
                 }
             },
             "additionalProperties": true,

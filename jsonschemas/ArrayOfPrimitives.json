@@ -1,8 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/definitions/ArrayOfPrimitives",
-    "definitions": {
+    "$ref": "#/$defs/ArrayOfPrimitives",
+    "$defs": {
         "ArrayOfPrimitives": {
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "object"
+                }
+            ],
             "properties": {
                 "description": {
                     "oneOf": [
@@ -15,6 +23,14 @@
                     ]
                 },
                 "luckyNumbers": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "array"
+                        }
+                    ],
                     "items": {
                         "oneOf": [
                             {
@@ -24,17 +40,17 @@
                                 "type": "integer"
                             }
                         ]
-                    },
-                    "oneOf": [
-                        {
-                            "type": "null"
-                        },
-                        {
-                            "type": "array"
-                        }
-                    ]
+                    }
                 },
                 "luckyBigNumbers": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "array"
+                        }
+                    ],
                     "items": {
                         "oneOf": [
                             {
@@ -44,17 +60,17 @@
                                 "type": "null"
                             }
                         ]
-                    },
-                    "oneOf": [
-                        {
-                            "type": "null"
-                        },
-                        {
-                            "type": "array"
-                        }
-                    ]
+                    }
                 },
                 "keyWords": {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "type": "array"
+                        }
+                    ],
                     "items": {
                         "oneOf": [
                             {
@@ -64,15 +80,7 @@
                                 "type": "string"
                             }
                         ]
-                    },
-                    "oneOf": [
-                        {
-                            "type": "null"
-                        },
-                        {
-                            "type": "array"
-                        }
-                    ]
+                    }
                 },
                 "big_number": {
                     "oneOf": [
@@ -86,14 +94,6 @@
                 }
             },
             "additionalProperties": true,
-            "oneOf": [
-                {
-                    "type": "null"
-                },
-                {
-                    "type": "object"
-                }
-            ],
             "title": "Array Of Primitives"
         }
     }
