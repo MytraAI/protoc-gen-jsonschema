@@ -456,7 +456,7 @@ func (c *Converter) convertMessageType(curPkg *ProtoPackage, msgDesc *descriptor
 	//newJSONSchema =currentMsg
 
 	newJSONSchema := &jsonschema.Schema{
-		Version:     c.schemaVersion,
+		//Version:     c.schemaVersion,
 		Definitions: definitions,
 		Ref:         c.refPrefix + msgName,
 	}
