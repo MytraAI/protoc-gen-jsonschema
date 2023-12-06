@@ -1,6 +1,8 @@
 Protobuf to JSON-Schema compiler
 ================================
 
+This is a Fork from [chrusty/protoc-gen-jsonschema](https://github.com/chrusty/protoc-gen-jsonschema). 
+
 This takes protobuf definitions and converts them into JSONSchemas, which can be used to dynamically validate JSON messages.
 
 Useful for people who define their data using ProtoBuf, but use JSON for the "wire" format.
@@ -46,9 +48,8 @@ Installation
 Install this plugin using Go:
 
 ```sh
-go install github.com/chrusty/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema@latest
+make install
 ```
-
 
 Usage
 -----
@@ -62,7 +63,6 @@ protoc \ # The protobuf compiler
 --jsonschema_out=. \ # jsonschema out directory
 --proto_path=testdata/proto testdata/proto/ArrayOfPrimitives.proto # proto input directories and folders
 ```
-
 
 Configuration Parameters
 ------------------------
@@ -265,7 +265,6 @@ Sample protos (for testing)
 * Proto containing 2 stand-alone enums: [samples.FirstEnum, samples.SecondEnum](internal/converter/testdata/proto/SeveralEnums.proto)
 * Proto containing 2 messages: [samples.FirstMessage, samples.SecondMessage](internal/converter/testdata/proto/SeveralMessages.proto)
 * Proto containing 12 messages: [samples.MessageKind1 - samples.MessageKind12](internal/converter/testdata/proto/TwelveMessages.proto)
-
 
 Links
 -----
