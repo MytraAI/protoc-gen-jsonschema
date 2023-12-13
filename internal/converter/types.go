@@ -188,13 +188,11 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 				{Type: gojsonschema.TYPE_NULL},
 				{
 					Type:            gojsonschema.TYPE_STRING,
-					Format:          "binary",
 					ContentEncoding: "base64",
 				},
 			}
 		} else {
 			jsonSchemaType.Type = gojsonschema.TYPE_STRING
-			jsonSchemaType.Format = "binary"
 			jsonSchemaType.ContentEncoding = "base64"
 		}
 
