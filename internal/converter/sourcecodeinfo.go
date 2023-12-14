@@ -154,6 +154,8 @@ func (c *Converter) formatTitleAndDescription(name *string, sl *descriptor.Sourc
 				params["minLength"] = strings.Split(s, " ")[1]
 			} else if (strings.HasPrefix(s, "@maxLength") || strings.HasPrefix(s, "@max_length") || strings.HasPrefix(s, "@maximum_length") || strings.HasPrefix(s, "@maximumLength")) && len(strings.Split(s, " ")) == 2 {
 				params["maxLength"] = strings.Split(s, " ")[1]
+			} else if strings.HasPrefix(s, "@readonly") || strings.HasPrefix(s, "@readOnly") || strings.HasPrefix(s, "@ReadOnly") || strings.HasPrefix(s, "@read_only") {
+				params["readOnly"] = "true"
 			} else {
 				comments = append(comments, s)
 			}

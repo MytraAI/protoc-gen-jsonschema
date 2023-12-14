@@ -390,12 +390,25 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 		title, comment, params := c.formatTitleAndDescription(nil, src)
 		jsonSchemaType.Title = title
 		jsonSchemaType.Description = comment
-
-		if val, ok := params["minimum"]; ok {
-			jsonSchemaType.Minimum = json.Number(val)
+		if jsonSchemaType.Type == gojsonschema.TYPE_INTEGER || jsonSchemaType.Type == gojsonschema.TYPE_NUMBER {
+			if val, ok := params["minimum"]; ok {
+				jsonSchemaType.Minimum = json.Number(val)
+			}
+			if val, ok := params["maximum"]; ok {
+				jsonSchemaType.Maximum = json.Number(val)
+			}
 		}
-		if val, ok := params["maximum"]; ok {
-			jsonSchemaType.Maximum = json.Number(val)
+		if jsonSchemaType.Type == gojsonschema.TYPE_STRING {
+			if val, ok := params["maxLength"]; ok {
+				if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+					jsonSchemaType.MaxLength = &v
+				}
+			}
+			if val, ok := params["minLength"]; ok {
+				if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+					jsonSchemaType.MinLength = &v
+				}
+			}
 		}
 		if val, ok := params["default"]; ok {
 			if jsonSchemaType.Type == "integer" || jsonSchemaType.Type == "number" {
@@ -404,15 +417,8 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 				jsonSchemaType.Default = val
 			}
 		}
-		if val, ok := params["maxLength"]; ok {
-			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
-				jsonSchemaType.MaxLength = &v
-			}
-		}
-		if val, ok := params["minLength"]; ok {
-			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
-				jsonSchemaType.MinLength = &v
-			}
+		if _, ok := params["readOnly"]; ok {
+			jsonSchemaType.ReadOnly = true
 		}
 	}
 
