@@ -268,7 +268,6 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 		// Add Comments and parameters
 		src := c.sourceInfo.GetField(desc);
 		title, comment, params := c.formatTitleAndDescription(nil, src)
-		jsonSchemaType.Type = gojsonschema.TYPE_ARRAY
 		jsonSchemaType.Title = title
 		jsonSchemaType.Description = comment
 		if _, ok := params["readOnly"]; ok {
