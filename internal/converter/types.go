@@ -265,6 +265,25 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 	if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED && jsonSchemaType.Type != gojsonschema.TYPE_OBJECT {
 		jsonSchemaType.Items = &jsonschema.Schema{}
 
+		// Add Comments and parameters
+		src := c.sourceInfo.GetField(desc);
+		title, comment, params := c.formatTitleAndDescription(nil, src)
+		jsonSchemaType.Type = gojsonschema.TYPE_ARRAY
+		jsonSchemaType.Title = title
+		jsonSchemaType.Description = comment
+		if _, ok := params["readOnly"]; ok {
+			jsonSchemaType.ReadOnly = true
+		}
+		if val, ok := params["maxLength"]; ok {
+			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+				jsonSchemaType.MaxLength = &v
+			}
+		}
+		if val, ok := params["minLength"]; ok {
+			if v, err := strconv.ParseUint(val, 10, 64); err == nil {
+				jsonSchemaType.MinLength = &v
+			}
+		}
 		// Custom field options from protoc-gen-validate:
 		if opt := proto.GetExtension(desc.GetOptions(), protoc_gen_validate.E_Rules); opt != nil {
 			if fieldRules, ok := opt.(*protoc_gen_validate.FieldRules); fieldRules != nil && ok {
@@ -386,7 +405,7 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 	jsonSchemaType.Required = dedupe(jsonSchemaType.Required)
 
 	// Generate a description from src comments (if available)
-	if src := c.sourceInfo.GetField(desc); src != nil {
+	if src := c.sourceInfo.GetField(desc); src != nil { 
 		title, comment, params := c.formatTitleAndDescription(nil, src)
 		jsonSchemaType.Title = title
 		jsonSchemaType.Description = comment
