@@ -1,4 +1,4 @@
-module github.com/AkihiroUeda35/protoc-gen-jsonschema
+module github.com/MytraAI/protoc-gen-jsonschema
 
 go 1.18
 

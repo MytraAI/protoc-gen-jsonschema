@@ -18,7 +18,7 @@ import (
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
 	plugin "google.golang.org/protobuf/types/pluginpb"
 
-	protoc_gen_jsonschema "github.com/AkihiroUeda35/protoc-gen-jsonschema"
+	protoc_gen_jsonschema "github.com/MytraAI/protoc-gen-jsonschema"
 )
 
 const (

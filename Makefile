@@ -11,7 +11,7 @@ build:
 .PHONY: fmt
 fmt:
 	@gofmt -s -w .
-	@goimports -w -local github.com/AkihiroUeda35/protoc-gen-jsonschema .
+	@goimports -w -local github.com/MytraAI/protoc-gen-jsonschema .
 
 .PHONY: generate
 generate:
@@ -19,7 +19,7 @@ generate:
 
 .PHONY: install
 install:
-	@go install github.com/AkihiroUeda35/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema
+	@go install github.com/MytraAI/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema
 
 .PHONY: build_linux
 build_linux:
