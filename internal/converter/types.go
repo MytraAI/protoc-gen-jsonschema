@@ -322,6 +322,21 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 			return nil, fmt.Errorf("no such message type named %s", desc.GetTypeName())
 		}
 
+		// Check if this type is defined in a dependency file
+		// Skip Google protobuf well-known types as they should be handled specially
+		typeName := strings.TrimPrefix(desc.GetTypeName(), ".")
+		if !strings.HasPrefix(typeName, "google.protobuf.") {
+			if isDependency, refFile := c.isMessageDefinedInDependency(recordType.GetName()); isDependency {
+				if c.includeImports {
+					// When include_imports=true, use external file references
+					jsonSchemaType.Ref = refFile
+					jsonSchemaType.Type = "" // Clear type when using $ref
+					return jsonSchemaType, nil
+				}
+				// When include_imports=false, dependencies will be included in $defs, so continue with normal processing
+			}
+		}
+
 		// Recurse the recordType:
 		recursedJSONSchemaType, err := c.recursiveConvertMessageType(curPkg, recordType, pkgName, duplicatedMessages, false)
 		if err != nil {
@@ -478,7 +493,7 @@ func (c *Converter) convertMessageType(curPkg *ProtoPackage, msgDesc *descriptor
 	//newJSONSchema =currentMsg
 
 	newJSONSchema := &jsonschema.Schema{
-		//Version:     c.schemaVersion,
+		Version:     c.schemaVersion,
 		Definitions: definitions,
 		Ref:         c.refPrefix + msgName,
 	}
@@ -500,7 +515,18 @@ func (c *Converter) findNestedMessages(curPkg *ProtoPackage, msgDesc *descriptor
 	result := make(map[*descriptor.DescriptorProto]string)
 	for message, messageName := range nestedMessages {
 		if !message.GetOptions().GetMapEntry() && !strings.HasPrefix(messageName, ".google.protobuf.") {
-			result[message] = strings.TrimLeft(messageName, ".")
+			// Check if this message is defined in a dependency
+			messageName := strings.TrimLeft(messageName, ".")
+			if isDependency, _ := c.isMessageDefinedInDependency(message.GetName()); isDependency {
+				// If include_imports=false, include dependencies in local definitions
+				// If include_imports=true, exclude them (they'll be in separate files)
+				if !c.includeImports {
+					result[message] = messageName
+				}
+			} else {
+				// Always include non-dependency messages
+				result[message] = messageName
+			}
 		}
 	}
 

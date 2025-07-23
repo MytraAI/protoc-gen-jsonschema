@@ -68,9 +68,17 @@ func testConvertSampleProto(t *testing.T, sampleProto sampleProto) {
 	}
 
 	// Test the TargetedMessages feature:
+	var parameters []string
 	if len(sampleProto.TargetedMessages) > 0 {
-		arg := fmt.Sprintf("messages=[%s]", strings.Join(sampleProto.TargetedMessages, messageDelimiter))
-		codeGeneratorRequest.Parameter = &arg
+		parameters = append(parameters, fmt.Sprintf("messages=[%s]", strings.Join(sampleProto.TargetedMessages, messageDelimiter)))
+	}
+	
+	// By default, don't use include_imports - dependencies will be included in $defs
+	// Tests can explicitly add include_imports if they want external file references
+	
+	if len(parameters) > 0 {
+		parameterString := strings.Join(parameters, ",")
+		codeGeneratorRequest.Parameter = &parameterString
 	}
 
 	// Perform the conversion:

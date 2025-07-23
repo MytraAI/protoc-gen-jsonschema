@@ -34,15 +34,21 @@ const (
 
 // Converter is everything you need to convert protos to JSONSchemas:
 type Converter struct {
-	Flags               ConverterFlags
-	commentDelimiter    string
-	excludeCommentToken string
-	logger              *logrus.Logger
-	refPrefix           string
-	schemaFileExtension string
-	schemaVersion       string
-	sourceInfo          *sourceCodeInfo
-	messageTargets      []string
+	Flags                 ConverterFlags
+	commentDelimiter      string
+	excludeCommentToken   string
+	logger                *logrus.Logger
+	refPrefix             string
+	schemaFileExtension   string
+	schemaVersion         string
+	sourceInfo            *sourceCodeInfo
+	messageTargets        []string
+	dependencyTree        map[string][]string        // file -> list of dependencies
+	generatedFiles        map[string]bool            // track generated files to avoid duplicates
+	includeImports        bool                       // whether to generate schemas for imports
+	outputFilesByMessage  map[string]string          // message name -> output file name
+	currentFile           string                     // track current file being processed
+	messageToFile         map[string]string          // message name -> source proto file
 }
 
 // ConverterFlags control the behaviour of the converter:
@@ -65,12 +71,16 @@ type ConverterFlags struct {
 // New returns a configured *Converter (defaulting to draft-04 version):
 func New(logger *logrus.Logger) *Converter {
 	return &Converter{
-		commentDelimiter:    defaultCommentDelimiter,
-		excludeCommentToken: defaultExcludeCommentToken,
-		logger:              logger,
-		refPrefix:           defaultRefPrefix,
-		schemaFileExtension: defaultFileExtension,
-		schemaVersion:       versionDraft04,
+		commentDelimiter:     defaultCommentDelimiter,
+		excludeCommentToken:  defaultExcludeCommentToken,
+		logger:               logger,
+		refPrefix:            defaultRefPrefix,
+		schemaFileExtension:  defaultFileExtension,
+		schemaVersion:        versionDraft04,
+		dependencyTree:       make(map[string][]string),
+		generatedFiles:       make(map[string]bool),
+		outputFilesByMessage: make(map[string]string),
+		messageToFile:        make(map[string]string),
 	}
 }
 
@@ -121,6 +131,10 @@ func (c *Converter) parseGeneratorParameters(parameters string) {
 			c.Flags.UseProtoAndJSONFieldNames = true
 		case "type_names_with_no_package":
 			c.Flags.TypeNamesWithNoPackage = true
+		case "include_imports":
+			c.includeImports = true
+		case "verbose":
+			c.logger.SetLevel(logrus.InfoLevel)
 
 		}
 
@@ -241,6 +255,108 @@ func (c *Converter) convertEnumType(enum *descriptor.EnumDescriptorProto, conver
 	return jsonSchemaType, nil
 }
 
+// buildDependencyTree builds a dependency tree from proto files
+func (c *Converter) buildDependencyTree(files []*descriptor.FileDescriptorProto) {
+	// Initialize dependency tree
+	for _, file := range files {
+		fileName := file.GetName()
+		c.dependencyTree[fileName] = []string{}
+		
+		// Add imports as dependencies
+		for _, dependency := range file.GetDependency() {
+			c.dependencyTree[fileName] = append(c.dependencyTree[fileName], dependency)
+		}
+		
+		c.logger.WithField("file", fileName).WithField("dependencies", c.dependencyTree[fileName]).Debug("Built dependency tree for file")
+	}
+}
+
+// getGenerationOrder returns files in dependency order (dependencies first)
+func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, targetFiles map[string]bool) []*descriptor.FileDescriptorProto {
+	visited := make(map[string]bool)
+	visiting := make(map[string]bool)
+	result := []*descriptor.FileDescriptorProto{}
+	filesByName := make(map[string]*descriptor.FileDescriptorProto)
+	
+	// Index files by name
+	for _, file := range files {
+		filesByName[file.GetName()] = file
+	}
+	
+	var visit func(fileName string) bool
+	visit = func(fileName string) bool {
+		if visited[fileName] {
+			return true
+		}
+		if visiting[fileName] {
+			c.logger.WithField("file", fileName).Warn("Circular dependency detected")
+			return false
+		}
+		
+		visiting[fileName] = true
+		
+		// Visit dependencies first
+		if deps, exists := c.dependencyTree[fileName]; exists {
+			for _, dep := range deps {
+				if depFile, exists := filesByName[dep]; exists {
+					if !visit(dep) {
+						return false
+					}
+					// If include_imports is enabled or this is a target file, add dependency to result
+					// Skip Google protobuf well-known types
+					if (c.includeImports || targetFiles[dep]) && !strings.HasPrefix(dep, "google/protobuf/") {
+						if !visited[dep] {
+							result = append(result, depFile)
+							visited[dep] = true
+						}
+					}
+				}
+			}
+		}
+		
+		visiting[fileName] = false
+		return true
+	}
+	
+	// Process target files and their dependencies
+	for _, file := range files {
+		fileName := file.GetName()
+		if targetFiles[fileName] {
+			if visit(fileName) && !visited[fileName] {
+				result = append(result, file)
+				visited[fileName] = true
+			}
+		}
+	}
+	
+	return result
+}
+
+// isMessageDefinedInDependency checks if a message is defined in a dependency file
+func (c *Converter) isMessageDefinedInDependency(messageName string) (bool, string) {
+	if c.currentFile == "" {
+		return false, ""
+	}
+	
+	// Check if this message is defined in a different file
+	if sourceFile, exists := c.messageToFile[messageName]; exists {
+		if sourceFile != c.currentFile {
+			// Check if this source file is a dependency of the current file
+			if deps, hasDeps := c.dependencyTree[c.currentFile]; hasDeps {
+				for _, dep := range deps {
+					if dep == sourceFile {
+						// This message is from a dependency, return the output file path
+						if outputFile, hasOutput := c.outputFilesByMessage[messageName]; hasOutput {
+							return true, outputFile
+						}
+					}
+				}
+			}
+		}
+	}
+	return false, ""
+}
+
 // Converts a proto file into a JSON-Schema:
 func (c *Converter) convertFile(file *descriptor.FileDescriptorProto, fileExtension string) ([]*plugin.CodeGeneratorResponse_File, error) {
 
@@ -255,11 +371,11 @@ func (c *Converter) convertFile(file *descriptor.FileDescriptorProto, fileExtens
 
 	// Warn about multiple messages / enums in files:
 	if !genSpecificMessages && len(file.GetMessageType()) > 1 {
-		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Debug("protoc-gen-jsonschema will create multiple MESSAGE schemas from one proto file")
+		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Warn("protoc-gen-jsonschema will create multiple MESSAGE schemas from one proto file")
 	}
 
 	if len(file.GetEnumType()) > 1 {
-		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Debug("protoc-gen-jsonschema will create multiple ENUM schemas from one proto file")
+		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Warn("protoc-gen-jsonschema will create multiple ENUM schemas from one proto file")
 	}
 
 	// Generate standalone ENUMs:
@@ -370,8 +486,47 @@ func (c *Converter) convert(request *plugin.CodeGeneratorRequest) (*plugin.CodeG
 	// Get the source-code info (we use this to map any code comments to JSONSchema descriptions):
 	c.sourceInfo = newSourceCodeInfo(request.GetProtoFile())
 
-	// Go through the list of proto files provided by protoc:
+	// Build dependency tree
+	c.buildDependencyTree(request.GetProtoFile())
+
+	// First pass: Register all types and enums
 	for _, fileDesc := range request.GetProtoFile() {
+		// Check that this file has a proto package, and give it one if not:
+		if fileDesc.GetPackage() == "" {
+			c.logger.WithField("filename", fileDesc.GetName()).WithField("default_package_name", defaultPackageName).Debug("Proto file doesn't specify a package - assuming the default")
+			fileDesc.Package = strPtr(defaultPackageName)
+		}
+
+		// Build a list of any messages specified by this file:
+		for _, msgDesc := range fileDesc.GetMessageType() {
+			c.logger.WithField("msg_name", msgDesc.GetName()).WithField("package_name", fileDesc.GetPackage()).Debug("Loading a message")
+			c.registerType(fileDesc.GetPackage(), msgDesc)
+			
+			// Track which file defines this message for dependency resolution
+			schemaFileName := c.generateSchemaFilename(fileDesc, c.schemaFileExtension, msgDesc.GetName())
+			c.outputFilesByMessage[msgDesc.GetName()] = schemaFileName
+			c.messageToFile[msgDesc.GetName()] = fileDesc.GetName()
+		}
+
+		// Build a list of any enums specified by this file:
+		for _, en := range fileDesc.GetEnumType() {
+			c.logger.WithField("enum_name", en.GetName()).WithField("package_name", fileDesc.GetPackage()).Debug("Loading an enum")
+			c.registerEnum(fileDesc.GetPackage(), en)
+		}
+	}
+
+	// Get files in dependency order
+	orderedFiles := c.getGenerationOrder(request.GetProtoFile(), generateTargets)
+
+	// Second pass: Generate schemas in dependency order
+	for _, fileDesc := range orderedFiles {
+		fileName := fileDesc.GetName()
+		
+		// Skip if already generated (avoid duplicates)
+		if c.generatedFiles[fileName] {
+			c.logger.WithField("filename", fileName).Debug("Skipping already generated file")
+			continue
+		}
 
 		// Start with the default / global file extension:
 		fileExtension := c.schemaFileExtension
@@ -396,34 +551,16 @@ func (c *Converter) convert(request *plugin.CodeGeneratorRequest) (*plugin.CodeG
 			}
 		}
 
-		// Check that this file has a proto package, and give it one if not:
-		if fileDesc.GetPackage() == "" {
-			c.logger.WithField("filename", fileDesc.GetName()).WithField("default_package_name", defaultPackageName).Debug("Proto file doesn't specify a package - assuming the default")
-			fileDesc.Package = strPtr(defaultPackageName)
-		}
-
-		// Build a list of any messages specified by this file:
-		for _, msgDesc := range fileDesc.GetMessageType() {
-			c.logger.WithField("msg_name", msgDesc.GetName()).WithField("package_name", fileDesc.GetPackage()).Debug("Loading a message")
-			c.registerType(fileDesc.GetPackage(), msgDesc)
-		}
-
-		// Build a list of any enums specified by this file:
-		for _, en := range fileDesc.GetEnumType() {
-			c.logger.WithField("enum_name", en.GetName()).WithField("package_name", fileDesc.GetPackage()).Debug("Loading an enum")
-			c.registerEnum(fileDesc.GetPackage(), en)
-		}
-
 		// Generate schemas for this file:
-		if _, ok := generateTargets[fileDesc.GetName()]; ok {
-			c.logger.WithField("filename", fileDesc.GetName()).Debug("Converting file")
-			converted, err := c.convertFile(fileDesc, fileExtension)
-			if err != nil {
-				response.Error = proto.String(fmt.Sprintf("Failed to convert %s: %v", fileDesc.GetName(), err))
-				return response, err
-			}
-			response.File = append(response.File, converted...)
+		c.logger.WithField("filename", fileName).Debug("Converting file")
+		c.currentFile = fileName // Track current file for dependency resolution
+		converted, err := c.convertFile(fileDesc, fileExtension)
+		if err != nil {
+			response.Error = proto.String(fmt.Sprintf("Failed to convert %s: %v", fileName, err))
+			return response, err
 		}
+		response.File = append(response.File, converted...)
+		c.generatedFiles[fileName] = true
 	}
 
 	// This is required in order to "support" optional proto3 fields:

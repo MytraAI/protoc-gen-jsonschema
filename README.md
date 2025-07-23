@@ -14,6 +14,8 @@ Generated Schemas
 -----------------
 
 - One JSONSchema file is generated for each root-level proto message and ENUM. These are intended to be stand alone self-contained schemas which can be used to validate a payload derived from their source proto message
+- **Dependency Resolution**: When a proto file imports another proto file, the plugin now generates separate JSONSchema files for the dependencies and uses `$ref` to reference them instead of duplicating definitions
+- **Dependency Tree Processing**: Files are processed in dependency order, ensuring base dependencies are generated before files that depend on them
 - Nested message schemas become [referenced "definitions"](https://cswr.github.io/JsonSchema/spec/definitions_references/). This means that you know the name of the proto message they came from, and their schema is not duplicated (within the context of one JSONSchema file at least)
 
 
@@ -92,10 +94,60 @@ protoc \
 |`enforce_oneof`| Interpret Proto "oneOf" clauses |
 |`enums_as_strings_only`| Only include strings in the allowed values for enums |
 |`file_extension`| Specify a custom file extension for generated schemas |
+|`include_imports`| Generate JSON schemas for imported .proto files and reference them with `$ref` |
 |`json_fieldnames`| Use JSON field names only |
 |`prefix_schema_files_with_package`| Prefix the output filename with package |
 |`proto_and_json_fieldnames`| Use proto and JSON field names |
 |`type_names_with_no_package`| When generating type names and refs, do not include the full package in the type name |
+|`verbose`| Enable verbose logging (INFO level and above) |
+
+
+Dependency Handling
+-------------------
+
+When proto files import other proto files, the plugin can now handle dependencies intelligently:
+
+### Basic Usage
+
+```bash
+# Generate schema for a file with dependencies
+protoc --jsonschema_out=schemas --jsonschema_opt=include_imports my_service.proto
+```
+
+### How it Works
+
+1. **Dependency Tree Analysis**: The plugin analyzes import relationships between proto files
+2. **Ordered Generation**: Dependencies are processed first, followed by files that depend on them
+3. **External References**: Instead of duplicating message definitions, files reference dependencies using `$ref: "DependencyMessage.json"`
+4. **Duplicate Prevention**: The same dependency file is never generated twice
+
+### Example
+
+Given these proto files:
+```protobuf
+// common.proto
+message Common { string id = 1; }
+
+// service.proto
+import "common.proto";
+message Service { Common common = 1; }
+```
+
+The generated `Service.json` will contain:
+```json
+{
+  "$ref": "#/$defs/Service",
+  "$defs": {
+    "Service": {
+      "properties": {
+        "common": { "$ref": "Common.json" }
+      }
+    }
+  }
+}
+```
+
+And a separate `Common.json` file will be generated containing the Common message definition.
 
 
 Custom Proto Options
