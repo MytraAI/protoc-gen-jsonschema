@@ -19,7 +19,7 @@ import (
 	"github.com/MytraAI/protoc-gen-jsonschema/internal/converter"
 )
 
-const version = "v1.5.0"
+const version = "v1.5.1"
 
 func init() {
 	versionFlag := flag.Bool("version", false, "prints current version")
@@ -32,9 +32,9 @@ func init() {
 
 func main() {
 
-	// Make a Logrus logger (default to INFO):
+	// Make a Logrus logger (default to WARNING level):
 	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(logrus.WarnLevel)
 	logger.SetOutput(os.Stderr)
 
 	// Use the logger to make a Converter:
