@@ -19,7 +19,7 @@ import (
 	"github.com/MytraAI/protoc-gen-jsonschema/internal/converter"
 )
 
-const version = "v1.5.1"
+const version = "v1.5.2"
 
 func init() {
 	versionFlag := flag.Bool("version", false, "prints current version")
