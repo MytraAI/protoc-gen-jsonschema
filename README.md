@@ -96,7 +96,7 @@ protoc \
 |`file_extension`| Specify a custom file extension for generated schemas |
 |`dependencies_as_external_refs`| Generate JSON schemas for imported .proto files and reference them with `$ref` |
 |`json_fieldnames`| Use JSON field names only |
-|`prefix_schema_files_with_package`| Prefix the output filename with package |
+|`prefix_schema_files_with_package`| Prefix the output filename with package (creates nested directories for dotted packages) |
 |`proto_and_json_fieldnames`| Use proto and JSON field names |
 |`type_names_with_no_package`| When generating type names and refs, do not include the full package in the type name |
 |`verbose`| Enable verbose logging (INFO level and above) |
@@ -256,6 +256,8 @@ protoc \
 ```
 
 ### Prefix generated schema files with their package name (as a directory)
+
+> Creates nested directories for dotted package names (e.g., `com.example.service` becomes `com/example/service/`)
 
 ```sh
 protoc \

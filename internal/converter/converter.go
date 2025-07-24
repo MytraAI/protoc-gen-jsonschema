@@ -585,7 +585,9 @@ func (c *Converter) convert(request *plugin.CodeGeneratorRequest) (*plugin.CodeG
 
 func (c *Converter) generateSchemaFilename(file *descriptor.FileDescriptorProto, fileExtension, protoName string) string {
 	if c.Flags.PrefixSchemaFilesWithPackage {
-		return fmt.Sprintf("%s/%s.%s", file.GetPackage(), protoName, fileExtension)
+		// Replace dots with forward slashes to create nested directories
+		packagePath := strings.ReplaceAll(file.GetPackage(), ".", "/")
+		return fmt.Sprintf("%s/%s.%s", packagePath, protoName, fileExtension)
 	}
 	return fmt.Sprintf("%s.%s", protoName, fileExtension)
 }
