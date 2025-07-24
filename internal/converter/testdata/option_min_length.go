@@ -1,5 +1,29 @@
 package testdata
 
+const OptionMinLength = `{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/$defs/OptionMinLength",
+    "$defs": {
+        "OptionMinLength": {
+            "required": [
+                "query"
+            ],
+            "properties": {
+                "query": {
+                    "minLength": 2,
+                    "type": "string"
+                },
+                "result_per_page": {
+                    "type": "integer"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Option Min Length"
+        }
+    }
+}`
+
 const OptionMinLengthFail = `{
     "query": "a",
 	"page_number": 4

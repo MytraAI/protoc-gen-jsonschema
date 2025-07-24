@@ -94,7 +94,7 @@ protoc \
 |`enforce_oneof`| Interpret Proto "oneOf" clauses |
 |`enums_as_strings_only`| Only include strings in the allowed values for enums |
 |`file_extension`| Specify a custom file extension for generated schemas |
-|`include_imports`| Generate JSON schemas for imported .proto files and reference them with `$ref` |
+|`dependencies_as_external_refs`| Generate JSON schemas for imported .proto files and reference them with `$ref` |
 |`json_fieldnames`| Use JSON field names only |
 |`prefix_schema_files_with_package`| Prefix the output filename with package |
 |`proto_and_json_fieldnames`| Use proto and JSON field names |
@@ -111,7 +111,7 @@ When proto files import other proto files, the plugin can now handle dependencie
 
 ```bash
 # Generate schema for a file with dependencies
-protoc --jsonschema_out=schemas --jsonschema_opt=include_imports my_service.proto
+protoc --jsonschema_out=schemas --jsonschema_opt=dependencies_as_external_refs my_service.proto
 ```
 
 ### How it Works

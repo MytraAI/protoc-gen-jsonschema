@@ -1,5 +1,38 @@
 package testdata
 
+const ArrayOfEnums = `{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/$defs/ArrayOfEnums",
+    "$defs": {
+        "ArrayOfEnums": {
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "stuff": {
+                    "items": {
+                        "enum": [
+                            "FOO",
+                            0,
+                            "BAR",
+                            1,
+                            "FIZZ",
+                            2,
+                            "BUZZ",
+                            3
+                        ]
+                    },
+                    "type": "array",
+                    "title": "Inline"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Array Of Enums"
+        }
+    }
+}`
+
 const ArrayOfEnumsFail = `{
     "description": "something",
     "stuff": [

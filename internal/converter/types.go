@@ -246,15 +246,15 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 			jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
 		default:
 			jsonSchemaType.Type = gojsonschema.TYPE_OBJECT
-			// if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
-			// 	jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
-			// }
-			// if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
-			// 	jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
-			// }
-			// if messageFlags.DisallowAdditionalProperties {
-			// 	jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
-			// }
+			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
+				jsonSchemaType.AdditionalProperties = jsonschema.TrueSchema
+			}
+			if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
+				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
+			}
+			if messageFlags.DisallowAdditionalProperties {
+				jsonSchemaType.AdditionalProperties = jsonschema.FalseSchema
+			}
 		}
 
 	default:
@@ -266,7 +266,7 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 		jsonSchemaType.Items = &jsonschema.Schema{}
 
 		// Add Comments and parameters
-		src := c.sourceInfo.GetField(desc);
+		src := c.sourceInfo.GetField(desc)
 		title, comment, params := c.formatTitleAndDescription(nil, src)
 		jsonSchemaType.Title = title
 		jsonSchemaType.Description = comment
@@ -327,13 +327,35 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 		typeName := strings.TrimPrefix(desc.GetTypeName(), ".")
 		if !strings.HasPrefix(typeName, "google.protobuf.") {
 			if isDependency, refFile := c.isMessageDefinedInDependency(recordType.GetName()); isDependency {
-				if c.includeImports {
-					// When include_imports=true, use external file references
-					jsonSchemaType.Ref = refFile
-					jsonSchemaType.Type = "" // Clear type when using $ref
-					return jsonSchemaType, nil
+				if c.dependenciesAsExtRefs {
+					// When dependencies_as_external_refs=true, use external file references
+					refSchema := &jsonschema.Schema{
+						Ref:  refFile + "#/$defs/" + recordType.GetName(),
+						Type: "", // Clear type when using $ref
+					}
+
+					// Set additionalProperties based on field label and flags (same logic as for inline types)
+					if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_OPTIONAL {
+						refSchema.AdditionalProperties = jsonschema.TrueSchema
+					}
+					if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REQUIRED {
+						refSchema.AdditionalProperties = jsonschema.FalseSchema
+					}
+					if messageFlags.DisallowAdditionalProperties {
+						refSchema.AdditionalProperties = jsonschema.FalseSchema
+					}
+
+					// For repeated fields, we need to wrap the reference in array schema
+					if desc.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+						jsonSchemaType.Items = refSchema
+						jsonSchemaType.Type = gojsonschema.TYPE_ARRAY
+						return jsonSchemaType, nil
+					}
+
+					// For non-repeated fields, return the reference directly
+					return refSchema, nil
 				}
-				// When include_imports=false, dependencies will be included in $defs, so continue with normal processing
+				// When dependencies_as_external_refs=false, dependencies will be included in $defs, so continue with normal processing
 			}
 		}
 
@@ -419,7 +441,7 @@ func (c *Converter) convertField(curPkg *ProtoPackage, desc *descriptor.FieldDes
 	jsonSchemaType.Required = dedupe(jsonSchemaType.Required)
 
 	// Generate a description from src comments (if available)
-	if src := c.sourceInfo.GetField(desc); src != nil { 
+	if src := c.sourceInfo.GetField(desc); src != nil {
 		title, comment, params := c.formatTitleAndDescription(nil, src)
 		jsonSchemaType.Title = title
 		jsonSchemaType.Description = comment
@@ -518,9 +540,9 @@ func (c *Converter) findNestedMessages(curPkg *ProtoPackage, msgDesc *descriptor
 			// Check if this message is defined in a dependency
 			messageName := strings.TrimLeft(messageName, ".")
 			if isDependency, _ := c.isMessageDefinedInDependency(message.GetName()); isDependency {
-				// If include_imports=false, include dependencies in local definitions
-				// If include_imports=true, exclude them (they'll be in separate files)
-				if !c.includeImports {
+				// If dependencies_as_external_refs=false, include dependencies in local definitions
+				// If dependencies_as_external_refs=true, exclude them (they'll be in separate files)
+				if !c.dependenciesAsExtRefs {
 					result[message] = messageName
 				}
 			} else {

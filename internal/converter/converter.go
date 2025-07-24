@@ -43,12 +43,13 @@ type Converter struct {
 	schemaVersion         string
 	sourceInfo            *sourceCodeInfo
 	messageTargets        []string
-	dependencyTree        map[string][]string        // file -> list of dependencies
-	generatedFiles        map[string]bool            // track generated files to avoid duplicates
-	includeImports        bool                       // whether to generate schemas for imports
-	outputFilesByMessage  map[string]string          // message name -> output file name
-	currentFile           string                     // track current file being processed
-	messageToFile         map[string]string          // message name -> source proto file
+	dependencyTree        map[string][]string // file -> list of dependencies
+	generatedFiles        map[string]bool     // track generated files to avoid duplicates
+	dependenciesAsExtRefs bool                // whether to use a $ref instead of embedded schema for dependencies
+	outputFilesByMessage  map[string]string   // message name -> output file name
+	currentFile           string              // track current file being processed
+	currentMessage        string              // track current message being processed
+	messageToFile         map[string]string   // message name -> source proto file
 }
 
 // ConverterFlags control the behaviour of the converter:
@@ -131,8 +132,8 @@ func (c *Converter) parseGeneratorParameters(parameters string) {
 			c.Flags.UseProtoAndJSONFieldNames = true
 		case "type_names_with_no_package":
 			c.Flags.TypeNamesWithNoPackage = true
-		case "include_imports":
-			c.includeImports = true
+		case "dependencies_as_external_refs":
+			c.dependenciesAsExtRefs = true
 		case "verbose":
 			c.logger.SetLevel(logrus.InfoLevel)
 
@@ -261,12 +262,10 @@ func (c *Converter) buildDependencyTree(files []*descriptor.FileDescriptorProto)
 	for _, file := range files {
 		fileName := file.GetName()
 		c.dependencyTree[fileName] = []string{}
-		
+
 		// Add imports as dependencies
-		for _, dependency := range file.GetDependency() {
-			c.dependencyTree[fileName] = append(c.dependencyTree[fileName], dependency)
-		}
-		
+		c.dependencyTree[fileName] = append(c.dependencyTree[fileName], file.GetDependency()...)
+
 		c.logger.WithField("file", fileName).WithField("dependencies", c.dependencyTree[fileName]).Debug("Built dependency tree for file")
 	}
 }
@@ -277,12 +276,12 @@ func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, 
 	visiting := make(map[string]bool)
 	result := []*descriptor.FileDescriptorProto{}
 	filesByName := make(map[string]*descriptor.FileDescriptorProto)
-	
+
 	// Index files by name
 	for _, file := range files {
 		filesByName[file.GetName()] = file
 	}
-	
+
 	var visit func(fileName string) bool
 	visit = func(fileName string) bool {
 		if visited[fileName] {
@@ -292,9 +291,9 @@ func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, 
 			c.logger.WithField("file", fileName).Warn("Circular dependency detected")
 			return false
 		}
-		
+
 		visiting[fileName] = true
-		
+
 		// Visit dependencies first
 		if deps, exists := c.dependencyTree[fileName]; exists {
 			for _, dep := range deps {
@@ -302,9 +301,9 @@ func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, 
 					if !visit(dep) {
 						return false
 					}
-					// If include_imports is enabled or this is a target file, add dependency to result
+					// If dependencies_as_external_refs is enabled or this is a target file, add dependency to result
 					// Skip Google protobuf well-known types
-					if (c.includeImports || targetFiles[dep]) && !strings.HasPrefix(dep, "google/protobuf/") {
+					if (c.dependenciesAsExtRefs || targetFiles[dep]) && !strings.HasPrefix(dep, "google/protobuf/") {
 						if !visited[dep] {
 							result = append(result, depFile)
 							visited[dep] = true
@@ -313,11 +312,11 @@ func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, 
 				}
 			}
 		}
-		
+
 		visiting[fileName] = false
 		return true
 	}
-	
+
 	// Process target files and their dependencies
 	for _, file := range files {
 		fileName := file.GetName()
@@ -328,7 +327,7 @@ func (c *Converter) getGenerationOrder(files []*descriptor.FileDescriptorProto, 
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -337,7 +336,12 @@ func (c *Converter) isMessageDefinedInDependency(messageName string) (bool, stri
 	if c.currentFile == "" {
 		return false, ""
 	}
-	
+
+	// Don't treat the current message as a dependency
+	if messageName == c.currentMessage {
+		return false, ""
+	}
+
 	// Check if this message is defined in a different file
 	if sourceFile, exists := c.messageToFile[messageName]; exists {
 		if sourceFile != c.currentFile {
@@ -351,6 +355,12 @@ func (c *Converter) isMessageDefinedInDependency(messageName string) (bool, stri
 						}
 					}
 				}
+			}
+		} else if c.dependenciesAsExtRefs {
+			// When dependencies_as_external_refs=true, messages from the same file that will be
+			// in separate JSON files should also be treated as dependencies
+			if outputFile, hasOutput := c.outputFilesByMessage[messageName]; hasOutput {
+				return true, outputFile
 			}
 		}
 	}
@@ -371,11 +381,11 @@ func (c *Converter) convertFile(file *descriptor.FileDescriptorProto, fileExtens
 
 	// Warn about multiple messages / enums in files:
 	if !genSpecificMessages && len(file.GetMessageType()) > 1 {
-		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Warn("protoc-gen-jsonschema will create multiple MESSAGE schemas from one proto file")
+		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Info("protoc-gen-jsonschema will create multiple MESSAGE schemas from one proto file")
 	}
 
 	if len(file.GetEnumType()) > 1 {
-		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Warn("protoc-gen-jsonschema will create multiple ENUM schemas from one proto file")
+		c.logger.WithField("schemas", len(file.GetMessageType())).WithField("proto_filename", protoFileName).Info("protoc-gen-jsonschema will create multiple ENUM schemas from one proto file")
 	}
 
 	// Generate standalone ENUMs:
@@ -440,6 +450,9 @@ func (c *Converter) convertFile(file *descriptor.FileDescriptorProto, fileExtens
 				continue
 			}
 
+			// Set current message for dependency resolution
+			c.currentMessage = msgDesc.GetName()
+
 			// Convert the message:
 			messageJSONSchema, err := c.convertMessageType(pkg, msgDesc)
 			if err != nil {
@@ -501,7 +514,7 @@ func (c *Converter) convert(request *plugin.CodeGeneratorRequest) (*plugin.CodeG
 		for _, msgDesc := range fileDesc.GetMessageType() {
 			c.logger.WithField("msg_name", msgDesc.GetName()).WithField("package_name", fileDesc.GetPackage()).Debug("Loading a message")
 			c.registerType(fileDesc.GetPackage(), msgDesc)
-			
+
 			// Track which file defines this message for dependency resolution
 			schemaFileName := c.generateSchemaFilename(fileDesc, c.schemaFileExtension, msgDesc.GetName())
 			c.outputFilesByMessage[msgDesc.GetName()] = schemaFileName
@@ -521,7 +534,7 @@ func (c *Converter) convert(request *plugin.CodeGeneratorRequest) (*plugin.CodeG
 	// Second pass: Generate schemas in dependency order
 	for _, fileDesc := range orderedFiles {
 		fileName := fileDesc.GetName()
-		
+
 		// Skip if already generated (avoid duplicates)
 		if c.generatedFiles[fileName] {
 			c.logger.WithField("filename", fileName).Debug("Skipping already generated file")

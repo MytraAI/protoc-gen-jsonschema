@@ -1,24 +1,26 @@
 package testdata
 
-const NestedObject = `{
+const TypeNamesWithNoPackage = `{
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "$ref": "#/$defs/NestedObject",
+    "$ref": "#/$defs/ArrayOfMessages",
     "$defs": {
-        "NestedObject": {
+        "ArrayOfMessages": {
             "properties": {
-                "payload": {
-                    "$ref": "#/$defs/samples.NestedObject.NestedPayload",
-                    "additionalProperties": true
-                },
                 "description": {
                     "type": "string"
+                },
+                "payload": {
+                    "items": {
+                        "$ref": "#/$defs/PayloadMessage"
+                    },
+                    "type": "array"
                 }
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "Nested Object"
+            "title": "Array Of Messages"
         },
-        "samples.NestedObject.NestedPayload": {
+        "PayloadMessage": {
             "properties": {
                 "name": {
                     "type": "string"
@@ -63,15 +65,21 @@ const NestedObject = `{
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "Nested Payload"
+            "title": "Payload Message"
         }
     }
 }`
 
-const NestedObjectFail = `{"payload": false}`
+const TypeNamesWithNoPackageFail = `{
+    "description": "something",
+    "payload": [
+        {"topology": "cruft"}
+    ]
+}`
 
-const NestedObjectPass = `{
-	"payload": {
-	  "topology": "NESTED_OBJECT"
-	}
+const TypeNamesWithNoPackagePass = `{
+    "description": "something",
+    "payload": [
+        {"topology": "ARRAY_OF_MESSAGE"}
+    ]
 }`

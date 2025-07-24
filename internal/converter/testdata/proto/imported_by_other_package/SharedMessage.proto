@@ -1,0 +1,14 @@
+syntax = "proto3";
+package shared;
+
+message SharedMessage {
+    string id = 1;
+    string name = 2;
+    int32 version = 3;
+}
+
+enum SharedEnum {
+    UNKNOWN = 0;
+    ACTIVE = 1;
+    INACTIVE = 2;
+}

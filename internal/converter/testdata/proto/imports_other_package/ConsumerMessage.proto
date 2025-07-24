@@ -1,0 +1,11 @@
+syntax = "proto3";
+package consumer;
+
+import "imported_by_other_package/SharedMessage.proto";
+
+message ConsumerMessage {
+    string consumer_id = 1;
+    shared.SharedMessage shared_data = 2;
+    shared.SharedEnum status = 3;
+    repeated shared.SharedMessage shared_list = 4;
+}
